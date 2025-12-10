@@ -75,8 +75,8 @@ if [ -d "$ROOT_DIR/.venv" ]; then
     echo -e "${GREEN}✓ Virtual environment activated${NC}"
 fi
 
-# Start API in background
-python3 -m api.main &
+# Start API in background using uvicorn directly
+python3 -m uvicorn api.main:app --host 0.0.0.0 --port 8001 &
 BACKEND_PID=$!
 echo -e "${GREEN}✓ Backend API started (PID: $BACKEND_PID)${NC}"
 echo ""

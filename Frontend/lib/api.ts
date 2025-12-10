@@ -79,9 +79,11 @@ export interface HealthStatus {
 
 export interface SpeechToTextResult {
   success: boolean;
-  text: string;
+  transcription: string;
   language?: string;
   duration?: number;
+  segments?: Array<{ start: number; end: number; text: string }>;
+  text_analysis?: TextAnalysisResult;
   error?: string;
 }
 

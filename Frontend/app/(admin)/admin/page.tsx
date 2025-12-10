@@ -240,7 +240,7 @@ export default function AdminPage() {
             <textarea
               id="text"
               {...register('text', { required: 'Question text is required' })}
-              className="w-full px-4 py-2 rounded-lg bg-foreground/5 border border-foreground/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent min-h-[100px]"
+              className="w-full px-4 py-2 rounded-lg bg-white border border-gray-300 text-black placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent min-h-[100px]"
               aria-invalid={errors.text ? 'true' : 'false'}
             />
             {errors.text && (
@@ -257,7 +257,7 @@ export default function AdminPage() {
                 id="category"
                 type="text"
                 {...register('category', { required: 'Category is required' })}
-                className="w-full px-4 py-2 rounded-lg bg-foreground/5 border border-foreground/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                className="w-full px-4 py-2 rounded-lg bg-white border border-gray-300 text-black placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                 aria-invalid={errors.category ? 'true' : 'false'}
               />
               {errors.category && (
@@ -272,7 +272,7 @@ export default function AdminPage() {
               <select
                 id="difficulty"
                 {...register('difficulty', { required: 'Difficulty is required' })}
-                className="w-full px-4 py-2 rounded-lg bg-foreground/5 border border-foreground/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                className="w-full px-4 py-2 rounded-lg bg-white border border-gray-300 text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                 aria-invalid={errors.difficulty ? 'true' : 'false'}
               >
                 <option value="easy">Easy</option>
@@ -293,7 +293,7 @@ export default function AdminPage() {
               id="tags"
               type="text"
               {...register('tags')}
-              className="w-full px-4 py-2 rounded-lg bg-foreground/5 border border-foreground/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              className="w-full px-4 py-2 rounded-lg bg-white border border-gray-300 text-black placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               placeholder="e.g., system-design, scalability"
             />
           </div>

@@ -21,19 +21,19 @@ export interface ProfileSetupProps {
 // Consistent input styles for onboarding
 const inputStyles = `
   w-full px-4 py-3 rounded-xl 
-  bg-foreground/5 text-foreground 
-  border border-foreground/10 
-  placeholder:text-foreground/40
-  hover:border-foreground/20
+  bg-white text-black 
+  border border-gray-300 
+  placeholder:text-gray-400
+  hover:border-gray-400
   focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent/50 
   transition-all duration-200
 `
 
 const selectStyles = `
   w-full px-4 py-3 rounded-xl 
-  bg-foreground/5 text-foreground 
-  border border-foreground/10 
-  hover:border-foreground/20
+  bg-white text-black 
+  border border-gray-300 
+  hover:border-gray-400
   focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent/50 
   transition-all duration-200
   appearance-none cursor-pointer

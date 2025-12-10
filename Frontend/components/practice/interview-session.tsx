@@ -240,9 +240,9 @@ export function InterviewSession({ question, onComplete }: InterviewSessionProps
         try {
           const result = await qnaceApi.transcribeSpeech(blob)
           
-          if (result.success && result.text) {
-            setAnswer(result.text)
-            console.log('✅ Transcription complete:', result.text)
+          if (result.success && result.transcription) {
+            setAnswer(result.transcription)
+            console.log('✅ Transcription complete:', result.transcription)
           } else if (result.error) {
             setTranscriptionError(result.error)
             console.warn('⚠️ Transcription error:', result.error)
@@ -564,7 +564,7 @@ export function InterviewSession({ question, onComplete }: InterviewSessionProps
                 value={answer}
                 onChange={(e) => setAnswer(e.target.value)}
                 placeholder={isTranscribing ? "Transcribing your speech..." : "Your speech will be automatically transcribed here. You can edit before submitting."}
-                className="w-full h-32 bg-background/50 border border-foreground/10 rounded-lg p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-accent/50"
+                className="w-full h-32 bg-white border border-gray-300 rounded-lg p-3 text-sm text-black placeholder:text-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-accent/50"
                 disabled={isTranscribing}
               />
               {transcriptionError && (

@@ -73,7 +73,16 @@ export interface HealthStatus {
     facial: boolean;
     voice: boolean;
     bert: boolean;
+    whisper?: boolean;
   };
+}
+
+export interface SpeechToTextResult {
+  success: boolean;
+  text: string;
+  language?: string;
+  duration?: number;
+  error?: string;
 }
 
 // ============================================
@@ -133,6 +142,26 @@ class QnAceApiClient {
 
     if (!response.ok) {
       throw new Error(`Voice analysis failed: ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Transcribe speech to text using Whisper
+   * @param audioBlob - Audio blob (WAV, WebM, etc.)
+   */
+  async transcribeSpeech(audioBlob: Blob): Promise<SpeechToTextResult> {
+    const formData = new FormData();
+    formData.append('audio', audioBlob, 'recording.wav');
+
+    const response = await fetch(`${this.baseUrl}/analyze/speech`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Speech transcription failed: ${response.statusText}`);
     }
 
     return response.json();

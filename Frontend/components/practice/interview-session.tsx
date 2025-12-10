@@ -47,6 +47,8 @@ export function InterviewSession({ question, onComplete }: InterviewSessionProps
   const [duration, setDuration] = React.useState(0)
   const [answer, setAnswer] = React.useState('')
   const [isSubmitting, setIsSubmitting] = React.useState(false)
+  const [isTranscribing, setIsTranscribing] = React.useState(false)
+  const [transcriptionError, setTranscriptionError] = React.useState<string | null>(null)
   const [realTimeMetrics, setRealTimeMetrics] = React.useState<RealTimeMetrics>({
     facialEmotion: 'neutral',
     facialConfidence: 0,
@@ -227,11 +229,42 @@ export function InterviewSession({ question, onComplete }: InterviewSessionProps
     stopRecording()
   }
 
+  // Auto-transcribe when recording blob is available
+  React.useEffect(() => {
+    const transcribeAudio = async () => {
+      if (blob && !isTranscribing && !answer && isApiAvailable) {
+        setIsTranscribing(true)
+        setTranscriptionError(null)
+        console.log('🎙️ Starting speech transcription...')
+        
+        try {
+          const result = await qnaceApi.transcribeSpeech(blob)
+          
+          if (result.success && result.text) {
+            setAnswer(result.text)
+            console.log('✅ Transcription complete:', result.text)
+          } else if (result.error) {
+            setTranscriptionError(result.error)
+            console.warn('⚠️ Transcription error:', result.error)
+          }
+        } catch (err) {
+          console.error('❌ Transcription failed:', err)
+          setTranscriptionError('Failed to transcribe speech. You can type your answer manually.')
+        } finally {
+          setIsTranscribing(false)
+        }
+      }
+    }
+    
+    transcribeAudio()
+  }, [blob, isApiAvailable])
+
   const handleReset = () => {
     resetRecording()
     resetAnalysis()
     setDuration(0)
     setAnswer('')
+    setTranscriptionError(null)
     // Reset captured frames and aggregated emotions
     capturedFramesRef.current = []
     aggregatedEmotionsRef.current = { samples: [], totalDuration: 0 }
@@ -520,15 +553,28 @@ export function InterviewSession({ question, onComplete }: InterviewSessionProps
               <h3 className="font-semibold flex items-center gap-2">
                 <Brain className="h-5 w-5" />
                 Your Answer (Text)
+                {isTranscribing && (
+                  <span className="text-xs text-accent animate-pulse flex items-center gap-1">
+                    <RefreshCw className="h-3 w-3 animate-spin" />
+                    Transcribing...
+                  </span>
+                )}
               </h3>
               <textarea
                 value={answer}
                 onChange={(e) => setAnswer(e.target.value)}
-                placeholder="Type your answer here for text analysis..."
+                placeholder={isTranscribing ? "Transcribing your speech..." : "Your speech will be automatically transcribed here. You can edit before submitting."}
                 className="w-full h-32 bg-background/50 border border-foreground/10 rounded-lg p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-accent/50"
+                disabled={isTranscribing}
               />
+              {transcriptionError && (
+                <p className="text-xs text-red-400 flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  {transcriptionError}
+                </p>
+              )}
               <p className="text-xs text-foreground/60">
-                {answer.length} characters • This will be analyzed by BERT for answer quality
+                {answer.length} characters • {blob && !isTranscribing && answer ? 'Review and edit your transcribed answer before submitting' : 'This will be analyzed by BERT for answer quality'}
               </p>
             </div>
           </Card>

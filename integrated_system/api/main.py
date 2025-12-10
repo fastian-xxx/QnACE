@@ -1,13 +1,14 @@
 """
-Q&ACE Unified API - Combines Facial, Voice, and Text (BERT) Analysis
+Q&ACE Unified API - Combines Facial, Voice, Text (BERT), and Speech-to-Text Analysis
 
 This is the single API endpoint that the Frontend connects to.
-It orchestrates all 3 ML models for comprehensive interview analysis.
+It orchestrates all ML models for comprehensive interview analysis.
 
 Endpoints:
 - POST /analyze/facial     - Analyze facial emotions from image
 - POST /analyze/voice      - Analyze voice emotions from audio
 - POST /analyze/text       - Analyze answer quality with BERT
+- POST /analyze/speech     - Transcribe speech to text (Whisper) + BERT analysis
 - POST /analyze/multimodal - Analyze all modalities together
 - GET  /health             - Health check
 """
@@ -71,6 +72,7 @@ facial_detector = None
 voice_detector = None
 bert_model = None
 bert_tokenizer = None
+speech_to_text = None
 
 
 def get_facial_detector():
@@ -127,6 +129,19 @@ def get_bert_model():
     return bert_model, bert_tokenizer
 
 
+def get_speech_to_text():
+    """Lazy load Whisper speech-to-text model."""
+    global speech_to_text
+    if speech_to_text is None:
+        try:
+            from speech_to_text import SpeechToText
+            speech_to_text = SpeechToText(model_size="base", device="cpu")
+            print("✅ Whisper speech-to-text loaded")
+        except Exception as e:
+            print(f"❌ Whisper failed: {e}")
+    return speech_to_text
+
+
 # ============================================
 # Request/Response Models
 # ============================================
@@ -159,6 +174,16 @@ class TextAnalysisResponse(BaseModel):
     quality_label: str    # "Poor", "Average", "Excellent"
     probabilities: Dict[str, float]
     feedback: str
+    error: Optional[str] = None
+
+
+class SpeechToTextResponse(BaseModel):
+    success: bool
+    transcription: str
+    language: Optional[str] = None
+    segments: Optional[List[Dict]] = None
+    # BERT analysis of the transcribed text
+    text_analysis: Optional[TextAnalysisResponse] = None
     error: Optional[str] = None
 
 
@@ -457,7 +482,8 @@ async def health():
         "models": {
             "facial": facial_detector is not None,
             "voice": voice_detector is not None,
-            "bert": bert_model is not None
+            "bert": bert_model is not None,
+            "whisper": speech_to_text is not None
         }
     }
 
@@ -645,6 +671,123 @@ async def analyze_text(request: TextAnalysisRequest):
             quality_label="",
             probabilities={},
             feedback="",
+            error=str(e)
+        )
+
+
+@app.post("/analyze/speech", response_model=SpeechToTextResponse)
+async def analyze_speech(
+    audio: UploadFile = File(...),
+    question: Optional[str] = Form(None),
+    analyze_text: bool = Form(True)
+):
+    """
+    Transcribe speech to text using Whisper and optionally analyze with BERT.
+    
+    This endpoint:
+    1. Receives an audio file with the user's spoken answer
+    2. Transcribes it to text using Whisper (local, no API key needed)
+    3. Optionally sends the transcription to BERT for quality analysis
+    
+    Args:
+        audio: Audio file (WAV, MP3, WEBM, etc.)
+        question: Optional interview question for context
+        analyze_text: Whether to also analyze transcription with BERT (default: True)
+    """
+    try:
+        stt = get_speech_to_text()
+        if stt is None:
+            return SpeechToTextResponse(
+                success=False,
+                transcription="",
+                error="Speech-to-text model not available. Install with: pip install openai-whisper"
+            )
+        
+        # Save audio to temp file
+        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
+            content = await audio.read()
+            tmp.write(content)
+            tmp_path = tmp.name
+        
+        try:
+            # Transcribe audio
+            print(f"📝 Transcribing audio file: {audio.filename}")
+            result = stt.transcribe(tmp_path)
+            
+            if not result.get('success') or not result.get('text'):
+                return SpeechToTextResponse(
+                    success=False,
+                    transcription="",
+                    error=result.get('error', 'Transcription failed')
+                )
+            
+            transcription = result['text']
+            print(f"✅ Transcribed: \"{transcription[:100]}{'...' if len(transcription) > 100 else ''}\"")
+            
+            # Optionally analyze with BERT
+            text_analysis_result = None
+            if analyze_text and transcription.strip():
+                model, tokenizer = get_bert_model()
+                if model is not None and tokenizer is not None:
+                    # Prepare text (include question for context if provided)
+                    analysis_text = transcription
+                    if question:
+                        analysis_text = f"Question: {question}\nAnswer: {transcription}"
+                    
+                    # Tokenize and analyze
+                    enc = tokenizer(
+                        analysis_text,
+                        padding=True,
+                        truncation=True,
+                        max_length=512,
+                        return_tensors="pt"
+                    )
+                    enc = {k: v.to(DEVICE) for k, v in enc.items()}
+                    
+                    with torch.no_grad():
+                        outputs = model(**enc)
+                        logits = outputs.logits.detach().cpu().numpy()[0]
+                        probs = np.exp(logits) / np.sum(np.exp(logits))
+                    
+                    labels = {0: "Poor", 1: "Average", 2: "Excellent"}
+                    predicted_idx = int(np.argmax(probs))
+                    quality_label = labels[predicted_idx]
+                    quality_score = (probs[0] * 16.5 + probs[1] * 50 + probs[2] * 83.5)
+                    
+                    # Generate feedback
+                    if quality_label == "Poor":
+                        feedback = "Your answer lacks depth. Try using the STAR method with specific examples."
+                    elif quality_label == "Average":
+                        feedback = "Good start! Add more specific details and quantifiable achievements."
+                    else:
+                        feedback = "Excellent! Well-structured response with clear communication."
+                    
+                    text_analysis_result = TextAnalysisResponse(
+                        success=True,
+                        quality_score=float(quality_score),
+                        quality_label=quality_label,
+                        probabilities={labels[i]: float(probs[i]) for i in range(3)},
+                        feedback=feedback
+                    )
+                    print(f"🧠 BERT Analysis: {quality_label} ({quality_score:.1f}%)")
+            
+            return SpeechToTextResponse(
+                success=True,
+                transcription=transcription,
+                language=result.get('language', 'en'),
+                segments=result.get('segments', []),
+                text_analysis=text_analysis_result
+            )
+            
+        finally:
+            os.unlink(tmp_path)
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return SpeechToTextResponse(
+            success=False,
+            transcription="",
             error=str(e)
         )
 

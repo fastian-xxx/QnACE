@@ -72,7 +72,7 @@ uvicorn api.main:app --reload --port 8000
 ### Voice Emotion Model
 - Architecture: Wav2Vec2
 - Accuracy: 73.37%
-- Emotions: Angry, Calm, Disgust, Fear, Happy, Neutral, Sad, Surprise
+- Emotions: Angry, Fear, Happy, Neutral, Sad, Surprise
 
 ### Facial Emotion Model
 - Architecture: EfficientNet-B2

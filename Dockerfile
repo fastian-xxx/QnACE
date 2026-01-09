@@ -1,4 +1,4 @@
-# Dockerfile for Q&ACE Backend
+# Railway-optimized Dockerfile for Q&ACE Backend
 FROM python:3.9-slim
 
 # Set working directory
@@ -12,25 +12,23 @@ RUN apt-get update && apt-get install -y \
     libxext6 \
     libxrender-dev \
     libgomp1 \
-    libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements files
+# Copy and install requirements
 COPY integrated_system/requirements.txt requirements.txt
-COPY interview_emotion_detection/requirements.txt requirements_emotion.txt
-
-# Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
-RUN pip install --no-cache-dir -r requirements_emotion.txt
 
 # Copy application code
-COPY . .
-
-# Expose port
-EXPOSE 8001
+COPY integrated_system/ /app/integrated_system/
+COPY interview_emotion_detection/ /app/interview_emotion_detection/
+COPY BERT_Model/ /app/BERT_Model/
 
 # Set environment variables
 ENV PYTHONPATH=/app/integrated_system:/app/interview_emotion_detection/src
+ENV PORT=8001
 
-# Run the API server
-CMD ["python", "integrated_system/api/main.py"]
+# Expose port (Railway will set PORT automatically)
+EXPOSE $PORT
+
+# Run the application
+CMD ["sh", "-c", "cd integrated_system && python api/main.py"]

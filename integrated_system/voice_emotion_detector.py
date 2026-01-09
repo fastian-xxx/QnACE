@@ -67,7 +67,7 @@ class VoiceEmotionModel(nn.Module):
         if not WAV2VEC_AVAILABLE:
             raise ImportError("transformers required for voice emotion detection")
         
-        self.wav2vec2 = Wav2Vec2Model.from_pretrained("facebook/wav2vec2-base")
+        self.wav2vec2 = Wav2Vec2Model.from_pretrained("abdullahjamil42/QnAce-Voice-Model")
         hidden_size = 768
         
         self.attention_pool = AttentionPooling(hidden_size)
@@ -130,14 +130,9 @@ class VoiceEmotionDetector:
         
         print(f"VoiceEmotionDetector using device: {self.device}")
         
-        # Find model path
-        if model_path is None:
-            model_path = self._find_model()
-        
-        self.model_path = Path(model_path)
+        # Use Hugging Face model directly, ignore model_path
+        self.model_path = None
         self.emotions = VOICE_EMOTIONS
-        
-        # Load model
         self._load_model()
         
     def _find_model(self) -> Path:
@@ -159,40 +154,15 @@ class VoiceEmotionDetector:
         return possible_paths[0]
     
     def _load_model(self):
-        """Load model weights from checkpoint."""
-        print(f"Loading voice model from: {self.model_path}")
-        
-        if not self.model_path.exists():
-            raise FileNotFoundError(f"Voice model not found: {self.model_path}")
-        
-        # Load checkpoint
-        checkpoint = torch.load(self.model_path, map_location=self.device, weights_only=False)
-        
-        # Get config from checkpoint
-        if isinstance(checkpoint, dict):
-            config = checkpoint.get('config', {})
-            if 'emotions' in checkpoint:
-                self.emotions = checkpoint['emotions']
-            
-            dropout = config.get('dropout', 0.3)
-        else:
-            dropout = 0.3
-        
+        """Load model from Hugging Face."""
+        print("Loading voice model from Hugging Face: abdullahjamil42/QnAce-Voice-Model")
         # Build model
         self.model = VoiceEmotionModel(
             num_classes=len(self.emotions),
-            dropout=dropout
+            dropout=0.3
         )
-        
-        # Load weights
-        if isinstance(checkpoint, dict) and 'model_state_dict' in checkpoint:
-            self.model.load_state_dict(checkpoint['model_state_dict'])
-        else:
-            self.model.load_state_dict(checkpoint)
-        
         self.model.to(self.device)
         self.model.eval()
-        
         print(f"✅ Voice model loaded! Emotions: {self.emotions}")
     
     def preprocess_audio(

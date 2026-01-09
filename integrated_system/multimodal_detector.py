@@ -140,19 +140,14 @@ class MultimodalEmotionDetector:
             self.facial_detector = None
     
     def _init_voice_detector(self, model_path: Optional[str] = None):
-        """Initialize voice emotion detector."""
+        """Initialize voice emotion detector from Hugging Face."""
         try:
             from voice_emotion_detector import VoiceEmotionDetector
-            
-            # Auto-find model if not provided
-            if model_path is None:
-                model_path = ROOT_DIR / "QnAce_Voice-Model" / "QnAce_Voice-Model.pth"
-            
             self.voice_detector = VoiceEmotionDetector(
-                model_path=str(model_path),
+                model_path=None,  # Always use Hugging Face
                 device=str(self.device)
             )
-            print("  ✅ Voice detector loaded (73.37% accuracy)")
+            print("  ✅ Voice detector loaded from Hugging Face (73.37% accuracy)")
         except Exception as e:
             print(f"  ⚠️ Voice detector failed: {e}")
             self.voice_detector = None
